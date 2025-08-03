@@ -1,6 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const EventEmitter = require('events');
-const WebSocket = require('ws');
 
 class GeminiLiveService extends EventEmitter {
   constructor() {
@@ -12,12 +11,10 @@ class GeminiLiveService extends EventEmitter {
     }
     
     this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-    this.liveWs = null;
+    this.model = null;
     this.connected = false;
     this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-live-001';
     this.systemInstruction = this.getRevoltMotorsInstructions();
-    this.responseQueue = [];
-    this.isReceiving = false;
     this.messageId = 0;
     
     console.log('✅ GeminiLiveService initialized successfully');
@@ -53,16 +50,14 @@ Always be enthusiastic about Revolt Motors and electric mobility. Keep responses
 
   async connectToGeminiLive() {
     try {
-      console.log('🔄 Connecting to Gemini Live API...');
+      console.log('🔄 Connecting to Gemini API...');
       
-      // For now, we'll use a REST-based approach since Gemini Live WebSocket might need special setup
-      // This is a working implementation that can be enhanced later
-      const model = this.genAI.getGenerativeModel({ 
+      // Initialize the model
+      this.model = this.genAI.getGenerativeModel({ 
         model: this.modelName,
         systemInstruction: this.systemInstruction
       });
       
-      this.model = model;
       this.connected = true;
       
       console.log('✅ Connected to Gemini API successfully');
@@ -70,7 +65,7 @@ Always be enthusiastic about Revolt Motors and electric mobility. Keep responses
       
       return true;
     } catch (error) {
-      console.error('❌ Failed to connect to Gemini Live:', error);
+      console.error('❌ Failed to connect to Gemini API:', error);
       this.emit('error', error);
       return false;
     }
@@ -83,12 +78,11 @@ Always be enthusiastic about Revolt Motors and electric mobility. Keep responses
     }
 
     try {
-      // For this implementation, we'll convert audio to text first
-      // In a production setup, you'd use the native audio capabilities
       console.log('🎤 Processing audio input...');
       
-      // Simulate audio processing - in real implementation, you'd transcribe audio
-      const prompt = "User spoke something - please respond as Rev from Revolt Motors about electric motorcycles";
+      // For this demo, we'll use a default prompt for audio
+      // In a real implementation, you'd transcribe the audio first
+      const prompt = "Tell me about Revolt Motors electric motorcycles";
       
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
@@ -138,19 +132,11 @@ Always be enthusiastic about Revolt Motors and electric mobility. Keep responses
 
   interrupt() {
     console.log('⚡ Interrupting current response...');
-    this.isReceiving = false;
-    this.responseQueue = [];
     this.emit('interrupted');
   }
 
   disconnect() {
     console.log('🔌 Disconnecting from Gemini API...');
-    
-    if (this.liveWs) {
-      this.liveWs.close();
-      this.liveWs = null;
-    }
-    
     this.connected = false;
     this.model = null;
     this.emit('disconnected');
