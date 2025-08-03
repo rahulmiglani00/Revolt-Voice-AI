@@ -72,7 +72,7 @@ wss.on('connection', async (ws, req) => {
   try {
     // Initialize Gemini Live API service
     geminiService = new GeminiLiveService();
-    await geminiService.connect();
+    await geminiService.connectToGeminiLive();
     
     // Set up message forwarding between client and Gemini
     ws.on('message', async (message) => {
@@ -82,17 +82,17 @@ wss.on('connection', async (ws, req) => {
         switch (data.type) {
           case 'audio':
             if (geminiService) {
-              await geminiService.sendAudio(data.data);
+              await geminiService.sendAudioData(data.data);
             }
             break;
           case 'text':
             if (geminiService) {
-              await geminiService.sendText(data.data);
+              await geminiService.sendTextMessage(data.data);
             }
             break;
-          case 'setup':
+          case 'interrupt':
             if (geminiService) {
-              await geminiService.updateConfig(data.config);
+              geminiService.interrupt();
             }
             break;
           default:
@@ -109,9 +109,21 @@ wss.on('connection', async (ws, req) => {
     
     // Forward Gemini responses to client
     if (geminiService) {
-      geminiService.on('response', (data) => {
+      geminiService.on('audioResponse', (data) => {
         if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(data));
+          ws.send(JSON.stringify({
+            type: 'audioResponse',
+            ...data
+          }));
+        }
+      });
+      
+      geminiService.on('textResponse', (data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'textResponse',
+            ...data
+          }));
         }
       });
       

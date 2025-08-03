@@ -49,7 +49,7 @@ try {
         'ws',
         'cors',
         'dotenv',
-        '@google/genai',
+        '@google/generative-ai',
         'express-rate-limit',
         'helmet'
     ];
